@@ -132,3 +132,152 @@ def crear_seccion(datos, profesor):
     datos["sections"].append(nueva)
     guardar_datos(datos)
     print("Sección creada.")
+
+
+# ----- Estudiantes -----
+
+def agregar_estudiante(datos, seccion):
+    """Agrega un estudiante a la sección."""
+    nombre = input("Nombre: ").strip()
+    cedula = input("Cédula: ").strip()
+    if nombre == "" or cedula == "":
+        print("Nombre y cédula son obligatorios.")
+        return
+    for est in seccion["estudiantes"]:
+        if est["cedula"] == cedula:
+            print("Ya existe un estudiante con esa cédula.")
+            return
+    seccion["estudiantes"].append({"nombre": nombre, "cedula": cedula, "notas": []})
+    guardar_datos(datos)
+    print("Estudiante agregado.")
+
+
+def listar_estudiantes(seccion):
+    """Muestra todos los estudiantes de la sección con sus notas y promedio."""
+    if len(seccion["estudiantes"]) == 0:
+        print("No hay estudiantes.")
+        return
+    print("\n--- Estudiantes de", seccion["nombre"], "---")
+    for est in seccion["estudiantes"]:
+        notas = est["notas"]
+        if len(notas) == 0:
+            prom = 0
+        else:
+            prom = sum(notas) / len(notas)
+        print(" ", est["nombre"], "| Cédula:", est["cedula"], "| Notas:", notas, "| Promedio:", round(prom, 2))
+
+
+def buscar_estudiante_por_cedula(datos):
+    """Busca un estudiante por cédula en todas las secciones."""
+    cedula = input("Cédula a buscar: ").strip()
+    if cedula == "":
+        return
+    for sec in datos["sections"]:
+        for est in sec["estudiantes"]:
+            if est["cedula"] == cedula:
+                print("\nNombre:", est["nombre"])
+                print("Cédula:", est["cedula"])
+                print("Sección:", sec["nombre"])
+                print("Notas:", est["notas"])
+                return
+    print("No encontrado.")
+
+
+def gestionar_notas(datos, seccion):
+    """Menú para agregar, editar o eliminar notas de un estudiante."""
+    cedula = input("Cédula del estudiante: ").strip()
+    estudiante = None
+    posicion = -1
+    for i in range(len(seccion["estudiantes"])):
+        if seccion["estudiantes"][i]["cedula"] == cedula:
+            estudiante = seccion["estudiantes"][i]
+            posicion = i
+            break
+    if estudiante is None:
+        print("Estudiante no encontrado.")
+        return
+    # Usamos un objeto Estudiante para las operaciones
+    est = Estudiante(estudiante["nombre"], estudiante["cedula"])
+    est.notas = list(estudiante["notas"])
+    while True:
+        print("\n--- Notas de", est.nombre, "---")
+        print("Actuales:", est.notas)
+        print("1. Agregar nota")
+        print("2. Editar nota")
+        print("3. Eliminar nota")
+        print("4. Volver")
+        op = input("Opción: ").strip()
+        if op == "1":
+            nota = input("Nota (0-20): ").strip()
+            if est.agregar_nota(nota):
+                seccion["estudiantes"][posicion]["notas"] = est.notas
+                guardar_datos(datos)
+                print("Nota agregada.")
+            else:
+                print("Nota inválida.")
+        elif op == "2":
+            if len(est.notas) == 0:
+                print("No hay notas.")
+                continue
+            for i in range(len(est.notas)):
+                print(" ", i + 1, ":", est.notas[i])
+            try:
+                num = int(input("Número de nota a editar: "))
+            except:
+                print("Entrada inválida.")
+                continue
+            nueva = input("Nueva nota: ").strip()
+            if est.editar_nota(num, nueva):
+                seccion["estudiantes"][posicion]["notas"] = est.notas
+                guardar_datos(datos)
+                print("Nota actualizada.")
+            else:
+                print("Valor inválido.")
+        elif op == "3":
+            if len(est.notas) == 0:
+                print("No hay notas.")
+                continue
+            for i in range(len(est.notas)):
+                print(" ", i + 1, ":", est.notas[i])
+            try:
+                num = int(input("Número de nota a eliminar: "))
+            except:
+                print("Entrada inválida.")
+                continue
+            if est.eliminar_nota(num):
+                seccion["estudiantes"][posicion]["notas"] = est.notas
+                guardar_datos(datos)
+                print("Nota eliminada.")
+            else:
+                print("Número inválido.")
+        elif op == "4":
+            break
+        else:
+            print("Opción no válida.")
+
+
+def eliminar_estudiante(datos, seccion):
+    """Elimina un estudiante de la sección."""
+    cedula = input("Cédula del estudiante a eliminar: ").strip()
+    for i in range(len(seccion["estudiantes"])):
+        if seccion["estudiantes"][i]["cedula"] == cedula:
+            seccion["estudiantes"].pop(i)
+            guardar_datos(datos)
+            print("Estudiante eliminado.")
+            return
+    print("No encontrado.")
+
+
+def eliminar_seccion(datos, seccion, profesor):
+    """Elimina la sección actual."""
+    r = input("¿Eliminar esta sección? (s/n): ").strip().lower()
+    if r != "s":
+        return False
+    nueva_lista = []
+    for sec in datos["sections"]:
+        if sec != seccion:
+            nueva_lista.append(sec)
+    datos["sections"] = nueva_lista
+    guardar_datos(datos)
+    print("Sección eliminada.")
+    return True
