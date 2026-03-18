@@ -273,11 +273,147 @@ def eliminar_seccion(datos, seccion, profesor):
     r = input("¿Eliminar esta sección? (s/n): ").strip().lower()
     if r != "s":
         return False
-    nueva_lista = []
-    for sec in datos["sections"]:
-        if sec != seccion:
-            nueva_lista.append(sec)
-    datos["sections"] = nueva_lista
+    nombre = seccion["nombre"]
+    datos["sections"] = [
+        sec for sec in datos["sections"]
+        if not (sec["teacher"] == profesor and sec["nombre"] == nombre)
+    ]
     guardar_datos(datos)
     print("Sección eliminada.")
     return True
+
+
+# ----- Menú dentro de una sección (no vuelve a pedir la sección) -----
+
+def menu_seccion_activa(datos, profesor, seccion):
+    """Gestiona estudiantes y notas usando la sección ya seleccionada."""
+    while True:
+        print("\n==========", seccion["nombre"], "==========")
+        print("1. Agregar estudiante")
+        print("2. Listar estudiantes")
+        print("3. Gestionar notas")
+        print("4. Eliminar estudiante")
+        print("5. Cambiar nombre de sección")
+        print("6. Eliminar sección")
+        print("0. Retroceder")
+        op = input("Opción: ").strip()
+
+        if op == "1":
+            agregar_estudiante(datos, seccion)
+        elif op == "2":
+            listar_estudiantes(seccion)
+        elif op == "3":
+            gestionar_notas(datos, seccion)
+        elif op == "4":
+            eliminar_estudiante(datos, seccion)
+        elif op == "5":
+            nuevo = input("Nuevo nombre: ").strip()
+            if nuevo != "":
+                seccion["nombre"] = nuevo
+                guardar_datos(datos)
+                print("Nombre actualizado.")
+        elif op == "6":
+            eliminado = eliminar_seccion(datos, seccion, profesor)
+            if eliminado:
+                return
+        elif op == "0":
+            return
+        else:
+            print("Opción no válida.")
+
+
+# ----- Menú Mis Secciones -----
+
+def menu_mis_secciones(datos, profesor):
+    """Muestra las secciones del profesor y permite seleccionar una."""
+    while True:
+        secciones = obtener_secciones(datos, profesor)
+        print("\n========== MIS SECCIONES ==========")
+
+        if len(secciones) == 0:
+            print("No tienes secciones.")
+            print("1. Crear sección")
+            print("0. Retroceder")
+            op = input("Opción: ").strip()
+            if op == "1":
+                crear_seccion(datos, profesor)
+            elif op == "0":
+                return
+            else:
+                print("Opción no válida.")
+            continue
+
+        for i in range(len(secciones)):
+            print(i + 1, ".", secciones[i]["nombre"])
+        print(len(secciones) + 1, ". Crear nueva sección")
+        print("0. Retroceder")
+
+        op = input("Opción: ").strip()
+        if op == "0":
+            return
+        if not op.isdigit():
+            print("Opción no válida.")
+            continue
+
+        num = int(op)
+        if 1 <= num <= len(secciones):
+            menu_seccion_activa(datos, profesor, secciones[num - 1])
+        elif num == len(secciones) + 1:
+            crear_seccion(datos, profesor)
+        else:
+            print("Opción no válida.")
+
+
+# ----- Menú principal -----
+
+def menu_principal(datos, profesor):
+    """Menú principal después de iniciar sesión."""
+    while True:
+        print("\n========== SISTEMA ACADÉMICO ==========")
+        print("1. Mis Secciones")
+        print("2. Buscar estudiante por cédula")
+        print("3. Crear sección")
+        print("4. Cerrar sesión")
+        op = input("Opción: ").strip()
+
+        if op == "1":
+            menu_mis_secciones(datos, profesor)
+        elif op == "2":
+            buscar_estudiante_por_cedula(datos)
+        elif op == "3":
+            crear_seccion(datos, profesor)
+        elif op == "4":
+            return
+        else:
+            print("Opción no válida.")
+
+
+def main():
+    """Punto de entrada."""
+    print("Sistema de Gestión Académica")
+    print("Datos en:", ARCHIVO)
+    datos = cargar_datos()
+
+    while True:
+        print("\n--- Inicio ---")
+        print("1. Iniciar sesión")
+        print("2. Registrarse")
+        print("3. Salir")
+        op = input("Opción: ").strip()
+
+        if op == "1":
+            profesor = iniciar_sesion(datos)
+            if profesor is not None:
+                print("Bienvenido,", profesor)
+                menu_principal(datos, profesor)
+        elif op == "2":
+            registrar(datos)
+        elif op == "3":
+            print("Hasta pronto.")
+            break
+        else:
+            print("Opción no válida.")
+
+
+if __name__ == "__main__":
+    main()
