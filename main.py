@@ -6,8 +6,39 @@ Guarda los datos en datos.json
 
 import json
 import os
+import hashlib
 
 ARCHIVO = "datos.json"
+
+ITERACIONES_HASH = 120000
+
+
+# ----- Seguridad de contraseñas (hash + salt) -----
+
+def generar_hash_clave(clave):
+    """Retorna un string con el hash de la clave (no reversible)."""
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", clave.encode("utf-8"), salt, ITERACIONES_HASH)
+    return "pbkdf2$" + str(ITERACIONES_HASH) + "$" + salt.hex() + "$" + dk.hex()
+
+
+def verificar_clave(clave_ingresada, valor_guardado):
+    """
+    Verifica una clave contra el valor guardado.
+    - Si el valor guardado es viejo (texto plano), compara directo.
+    - Si es nuevo (pbkdf2$...), verifica con pbkdf2.
+    Retorna True/False.
+    """
+    if isinstance(valor_guardado, str) and valor_guardado.startswith("pbkdf2$"):
+        partes = valor_guardado.split("$")
+        if len(partes) != 4:
+            return False
+        iteraciones = int(partes[1])
+        salt = bytes.fromhex(partes[2])
+        esperado = bytes.fromhex(partes[3])
+        obtenido = hashlib.pbkdf2_hmac("sha256", clave_ingresada.encode("utf-8"), salt, iteraciones)
+        return obtenido == esperado
+    return clave_ingresada == valor_guardado
 
 
 # ----- Cargar y guardar datos -----
@@ -90,7 +121,7 @@ def registrar(datos):
     if clave == "":
         print("La contraseña no puede estar vacía.")
         return
-    datos["teachers"][usuario] = clave
+    datos["teachers"][usuario] = generar_hash_clave(clave)
     guardar_datos(datos)
     print("Registrado correctamente.")
 
@@ -105,9 +136,14 @@ def iniciar_sesion(datos):
         print("Usuario no encontrado.")
         return None
     clave = input("Contraseña: ")
-    if datos["teachers"][usuario] != clave:
+    guardada = datos["teachers"][usuario]
+    if not verificar_clave(clave, guardada):
         print("Contraseña incorrecta.")
         return None
+    # Migración automática: si estaba en texto plano, se guarda como hash.
+    if isinstance(guardada, str) and not guardada.startswith("pbkdf2$"):
+        datos["teachers"][usuario] = generar_hash_clave(clave)
+        guardar_datos(datos)
     return usuario
 
 
